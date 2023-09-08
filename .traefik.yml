@@ -1,0 +1,10 @@
+displayName: JWT2Headers converter middleware
+type: middleware
+
+import: github.com/Farrukhraz/jwt2headers
+
+summary: 'Extract some JWT values and append them to headers'
+
+testData:
+  Cookies:
+    jwt_token: "{{JWT_COOKIE}}"
