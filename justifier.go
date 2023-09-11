@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
 	"net/http"
-	"text/template"
+	"strings"
 )
 
 type Claims struct {
@@ -17,7 +17,7 @@ type UserInfoStruct struct {
 	Username string
 	RealName string
 	Email    string
-	//Groups   []string
+	Groups   []string
 }
 
 // Config the plugin configuration.
@@ -34,10 +34,9 @@ func CreateConfig() *Config {
 
 // Demo a Demo plugin.
 type Demo struct {
-	next     http.Handler
-	cookies  map[string]string
-	name     string
-	template *template.Template
+	next    http.Handler
+	cookies map[string]string
+	name    string
 }
 
 // New created a new Demo plugin.
@@ -47,10 +46,9 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 	}
 
 	return &Demo{
-		cookies:  config.Cookies,
-		next:     next,
-		name:     name,
-		template: template.New("demo").Delims("[[", "]]"),
+		cookies: config.Cookies,
+		next:    next,
+		name:    name,
 	}, nil
 }
 
@@ -76,12 +74,17 @@ func (a *Demo) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		userIfno.Username = fmt.Sprintf("%+v", claims["preferred_username"])
 		userIfno.RealName = fmt.Sprintf("%+v", claims["name"])
 		userIfno.Email = fmt.Sprintf("%+v", claims["email"])
-		// ToDo get user's groups and set them in headers
+		groupsInterface := claims["groups"].([]interface{})
+		userIfno.Groups = make([]string, len(groupsInterface))
+		for i, v := range groupsInterface {
+			userIfno.Groups[i] = v.(string)
+		}
 	}
 
 	req.Header.Set("X-User-Username", userIfno.Username)
 	req.Header.Set("X-User-Email", userIfno.Email)
 	req.Header.Set("X-User-Name", userIfno.RealName)
+	req.Header.Set("X-User-Groups", strings.Join(userIfno.Groups[:], ";"))
 
 	a.next.ServeHTTP(rw, req)
 }
