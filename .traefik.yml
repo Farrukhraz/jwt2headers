@@ -7,4 +7,5 @@ summary: 'Extract some JWT values and append them to headers'
 
 testData:
   Cookies:
-    jwt_token: "{{JWT_COOKIE}}"
+    jwt_token: "your_cookie"
+  redirectUrl: "https://google.com"

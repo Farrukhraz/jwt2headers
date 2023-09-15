@@ -22,7 +22,8 @@ type UserInfoStruct struct {
 
 // Config the plugin configuration.
 type Config struct {
-	Cookies map[string]string `json:"cookies,omitempty"`
+	Cookies     map[string]string `json:"cookies,omitempty"`
+	RedirectUrl string            `json:"redirectUrl"`
 }
 
 // CreateConfig creates the default plugin configuration.
@@ -34,39 +35,46 @@ func CreateConfig() *Config {
 
 // Demo a Demo plugin.
 type Demo struct {
-	next    http.Handler
-	cookies map[string]string
-	name    string
+	next        http.Handler
+	cookies     map[string]string
+	redirectUrl string
+	name        string
 }
 
 // New created a new Demo plugin.
 func New(ctx context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
-	if len(config.Cookies) == 0 {
-		return nil, fmt.Errorf("cookies cannot be empty")
+	if len(config.RedirectUrl) == 0 {
+		return nil, fmt.Errorf("'redirectUrl' parameter in configuration file cannot be empty")
 	}
 
 	return &Demo{
-		cookies: config.Cookies,
-		next:    next,
-		name:    name,
+		cookies:     config.Cookies,
+		redirectUrl: config.RedirectUrl,
+		next:        next,
+		name:        name,
 	}, nil
 }
 
 func (a *Demo) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	cookie, err := req.Cookie("jwt_token")
 	if err != nil {
+		http.Redirect(rw, req, a.redirectUrl, http.StatusSeeOther)
 		http.Error(rw, "Required cookie is not found", http.StatusUnauthorized)
+		a.next.ServeHTTP(rw, req)
 	}
 
 	token, err := jwt.Parse(cookie.Value, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
 			errorMessage := fmt.Sprintf("Unexpected signing method: %v", token.Header["alg"])
 			http.Error(rw, errorMessage, http.StatusInternalServerError)
+			a.next.ServeHTTP(rw, req)
 		}
 		return token, nil
 	})
 
-	// ToDo check that cookie is not expired
+	// ToDo check that cookie is not expired. If expired request fresh jwt_token and
+	//  return it to frontend client with redirect request (to previously requested url)
+
 	// ToDo check that cookie signature is valid
 
 	var userIfno UserInfoStruct
