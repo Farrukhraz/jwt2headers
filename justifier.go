@@ -56,10 +56,17 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 }
 
 func (a *Demo) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	_, err := req.Cookie("authelia_session")
+	if err != nil {
+		fmt.Println(rw, "Required authentication cookie is not found")
+		http.Redirect(rw, req, a.redirectUrl, http.StatusSeeOther)
+		a.next.ServeHTTP(rw, req)
+	}
+
 	cookie, err := req.Cookie("jwt_token")
 	if err != nil {
+		fmt.Println(rw, "Required authorization cookie is not found")
 		http.Redirect(rw, req, a.redirectUrl, http.StatusSeeOther)
-		http.Error(rw, "Required cookie is not found", http.StatusUnauthorized)
 		a.next.ServeHTTP(rw, req)
 	}
 
