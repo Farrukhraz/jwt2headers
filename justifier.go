@@ -3,6 +3,7 @@ package jwt2headers
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
 	"net/http"
@@ -98,6 +99,10 @@ func (a *Demo) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		}
 	}
 
+	// for now userID is just a base64 string, but then it'll be uuid/ID
+	userID := base64.StdEncoding.EncodeToString([]byte(userIfno.Username))
+
+	req.Header.Set("X-User-id", userID)
 	req.Header.Set("X-User-Username", userIfno.Username)
 	req.Header.Set("X-User-Email", userIfno.Email)
 	req.Header.Set("X-User-Name", userIfno.RealName)
