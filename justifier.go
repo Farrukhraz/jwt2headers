@@ -61,6 +61,7 @@ func (a *Demo) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		fmt.Println(rw, "Required authentication cookie is not found")
 		http.Redirect(rw, req, a.redirectUrl, http.StatusSeeOther)
 		a.next.ServeHTTP(rw, req)
+		return
 	}
 
 	cookie, err := req.Cookie("jwt_token")
@@ -68,6 +69,7 @@ func (a *Demo) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		fmt.Println(rw, "Required authorization cookie is not found")
 		http.Redirect(rw, req, a.redirectUrl, http.StatusSeeOther)
 		a.next.ServeHTTP(rw, req)
+		return
 	}
 
 	token, err := jwt.Parse(cookie.Value, func(token *jwt.Token) (interface{}, error) {
