@@ -9,3 +9,13 @@ testData:
   Cookies:
     jwt_token: "your_cookie"
   redirectUrl: "https://google.com"
+  contourSeparator:
+    - separator:
+        domain: prod.fake.com
+        allowedGroup: PROD
+    - separator:
+        domain: dev.fake.com
+        allowedGroup: DEV
+    - separator:
+        domain: test.fake.com
+        allowedGroup: TEST

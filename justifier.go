@@ -21,10 +21,16 @@ type UserInfoStruct struct {
 	Groups   []string
 }
 
+type SeparatorStruct struct {
+	Domain       string `json:"domain"`
+	AllowedGroup string `json:"allowedGroup,omitempty"`
+}
+
 // Config the plugin configuration.
 type Config struct {
-	Cookies     map[string]string `json:"cookies,omitempty"`
-	RedirectUrl string            `json:"redirectUrl"`
+	Cookies          map[string]string `json:"cookies,omitempty"`
+	RedirectUrl      string            `json:"redirectUrl"`
+	ContourSeparator []SeparatorStruct `json:"contourSeparator"`
 }
 
 // CreateConfig creates the default plugin configuration.
@@ -36,10 +42,11 @@ func CreateConfig() *Config {
 
 // Demo a Demo plugin.
 type Demo struct {
-	next        http.Handler
-	cookies     map[string]string
-	redirectUrl string
-	name        string
+	next             http.Handler
+	cookies          map[string]string
+	contourSeparator []SeparatorStruct
+	redirectUrl      string
+	name             string
 }
 
 // New created a new Demo plugin.
@@ -49,10 +56,11 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 	}
 
 	return &Demo{
-		cookies:     config.Cookies,
-		redirectUrl: config.RedirectUrl,
-		next:        next,
-		name:        name,
+		cookies:          config.Cookies,
+		redirectUrl:      config.RedirectUrl,
+		contourSeparator: config.ContourSeparator,
+		next:             next,
+		name:             name,
 	}, nil
 }
 
@@ -60,6 +68,7 @@ func (a *Demo) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	_, err := req.Cookie("authelia_session")
 	if err != nil {
 		fmt.Println(rw, "Required authentication cookie is not found")
+		fmt.Println(req)
 		http.Redirect(rw, req, a.redirectUrl, http.StatusSeeOther)
 		a.next.ServeHTTP(rw, req)
 		return
@@ -99,7 +108,32 @@ func (a *Demo) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	// for now userID is just a base64 string, but then it'll be uuid/ID
+	// check that user has access to particular domain
+	accessAllowed := false
+	userDomainName := req.Header.Get("X-Forwarded-Host")
+	requeiredGroupName := ""
+	for _, separator := range a.contourSeparator {
+		if separator.Domain == userDomainName {
+			requeiredGroupName = separator.AllowedGroup
+		}
+	}
+	if requeiredGroupName != "" {
+		for _, groupName := range userIfno.Groups {
+			if requeiredGroupName == groupName {
+				accessAllowed = true
+			}
+		}
+	} else {
+		accessAllowed = true
+	}
+	if accessAllowed == false {
+		errorMessage := fmt.Sprintf("Domain is not allowed for your role!")
+		http.Error(rw, errorMessage, http.StatusForbidden)
+		a.next.ServeHTTP(rw, req)
+		return
+	}
+
+	// for now userID is just a base64(username), but then it'll be uuid/ID
 	userID := base64.StdEncoding.EncodeToString([]byte(userIfno.Username))
 
 	req.Header.Set("X-User-id", userID)
