@@ -20,7 +20,11 @@ func TestBaseLogic(t *testing.T) {
 		},
 		{
 			Domain:       "dev.fake.com",
-			AllowedGroup: "USER_MANAGER",
+			AllowedGroup: "DEV",
+		},
+		{
+			Domain:       "test.fake.com",
+			AllowedGroup: "TEST",
 		},
 	}
 
@@ -54,9 +58,13 @@ func TestBaseLogic(t *testing.T) {
 	}
 	req.AddCookie(&autheliaCookie)
 	req.AddCookie(&jwtCookie)
-	req.Header.Set("X-Forwarded-Host", "dev.fake.com")
+	req.Header.Set("X-Forwarded-Host", "test.fake.com")
 
 	handler.ServeHTTP(recorder, req)
+
+	if recorder.Code != 200 {
+		t.Errorf("200 response was expected, but %v received", recorder.Code)
+	}
 
 	assertHeader(t, req, "X-User-Username", "manager")
 	assertHeader(t, req, "X-User-Email", "manager@gmail.com")
@@ -75,6 +83,10 @@ func TestUserGroupNoAccess(t *testing.T) {
 		{
 			Domain:       "dev.fake.com",
 			AllowedGroup: "DEV",
+		},
+		{
+			Domain:       "test.fake.com",
+			AllowedGroup: "TEST",
 		},
 	}
 
@@ -113,7 +125,7 @@ func TestUserGroupNoAccess(t *testing.T) {
 	handler.ServeHTTP(recorder, req)
 
 	if recorder.Code != 403 {
-		t.Errorf("403 response was expected, but doesn't received")
+		t.Errorf("403 response was expected, but %v received", recorder.Code)
 	}
 }
 

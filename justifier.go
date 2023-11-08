@@ -108,7 +108,15 @@ func (a *Demo) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	// check that user has access to particular domain
+	// ToDo hardcode. Delete it when CRM won't fail if multiple roles are received
+	accountingAllowedRolesArray := [3]string{
+		"USER_INTERNAL_MANAGER",
+		"USER_MANAGER",
+		"USER_WHALE_MANAGER",
+	}
+	var accountingRoles []string
+
+	// checks that user has access to particular domain
 	accessAllowed := false
 	userDomainName := req.Header.Get("X-Forwarded-Host")
 	requeiredGroupName := ""
@@ -121,6 +129,11 @@ func (a *Demo) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		for _, groupName := range userIfno.Groups {
 			if requeiredGroupName == groupName {
 				accessAllowed = true
+			}
+			for _, allowedGroupName := range accountingAllowedRolesArray {
+				if allowedGroupName == groupName {
+					accountingRoles = append(accountingRoles, groupName)
+				}
 			}
 		}
 	} else {
@@ -140,7 +153,7 @@ func (a *Demo) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	req.Header.Set("X-User-Username", userIfno.Username)
 	req.Header.Set("X-User-Email", userIfno.Email)
 	req.Header.Set("X-User-Name", userIfno.RealName)
-	req.Header.Set("X-User-Groups", strings.Join(userIfno.Groups[:], ";"))
+	req.Header.Set("X-User-Groups", strings.Join(accountingRoles[:], ";"))
 
 	a.next.ServeHTTP(rw, req)
 }
